@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>LadderMath - the top two rungs are not steps</title>
+<style>
+  :root { --bg:#141009; --card:#1f1910; --line:#3a2f1c; --ink:#f2e9d8; --dim:#b3a486; --acc:#e8a94e; }
+  * { box-sizing:border-box; margin:0; }
+  body { background:var(--bg); color:var(--ink); font:15px/1.5 system-ui, sans-serif; padding:32px 18px 64px; }
+  .wrap { max-width:1060px; margin:0 auto; }
+  h1 { font-size:26px; letter-spacing:.5px; }
+  h1 span { color:var(--acc); }
+  .home { float:right; color:var(--dim); text-decoration:none; font-size:13px; margin-top:8px; }
+  .card { background:var(--card); border:1px solid var(--line); border-radius:14px; padding:22px; margin-top:20px; }
+  .card h2 { font-size:15px; color:var(--dim); font-weight:600; text-transform:uppercase; letter-spacing:1px; margin-bottom:14px; }
+  .row { display:flex; gap:12px; flex-wrap:wrap; }
+  .row > div { flex:1; min-width:160px; }
+  label { display:block; font-size:12px; color:var(--dim); margin-bottom:4px; }
+  input, select { width:100%; background:#171208; border:1px solid var(--line); color:var(--ink); border-radius:8px; padding:9px 10px; font:inherit; }
+  .chk { display:flex; align-items:center; gap:8px; margin-top:24px; font-size:14px; color:var(--ink); }
+  .chk input { width:auto; }
+  button { background:var(--acc); color:#241703; border:0; border-radius:9px; padding:10px 20px; font:600 15px system-ui; cursor:pointer; }
+  button.ghost { background:#171208; color:var(--acc); border:1px solid var(--line); padding:8px 14px; font-size:13px; }
+  .err { color:#ff8a80; font-size:14px; margin-top:10px; min-height:20px; }
+  .note { color:var(--dim); font-size:12.5px; margin-top:10px; }
+  .verdict { background:#211808; border:1px solid #57431c; border-radius:12px; padding:18px 20px; margin-top:20px; font-size:16px; line-height:1.6; display:none; }
+  .verdict b { color:var(--acc); }
+  .stats { display:grid; grid-template-columns:repeat(auto-fit,minmax(160px,1fr)); gap:12px; margin-top:20px; }
+  .stat { background:var(--card); border:1px solid var(--line); border-radius:12px; padding:16px; }
+  .stat .v { font-size:22px; font-weight:700; }
+  .stat .k { color:var(--dim); font-size:12px; margin-top:4px; }
+  .tabs { display:flex; gap:10px; margin-top:24px; }
+  .tabs button.on { background:var(--acc); color:#241703; border-color:var(--acc); }
+  .hidden { display:none; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <a class="home" href="index.html">home</a>
+  <h1>Ladder<span>Math</span></h1>
+
+  <div class="tabs">
+    <button class="ghost on" id="tabCheck">Check my setup</button>
+    <button class="ghost" id="tabPick">Pick a ladder</button>
+  </div>
+
+  <div class="card" id="paneCheck">
+    <h2>Is the lean safe?</h2>
+    <div class="row">
+      <div><label>Height where the ladder touches (m)</label><input id="contact" type="number" value="4" min="1" max="12" step="0.1"></div>
+      <div><label>Base distance from the wall (m)</label><input id="base" type="number" value="1" min="0.1" max="6" step="0.1"></div>
+    </div>
+    <div style="margin-top:16px; display:flex; gap:10px; flex-wrap:wrap;">
+      <button id="goCheck">Check the angle</button>
+      <button class="ghost" id="presetShallow">classic skid setup</button>
+      <button class="ghost" id="presetSteep">classic tip setup</button>
+    </div>
+    <div class="err" id="err1"></div>
+    <div class="note">The 4:1 rule: 1 m of base for every 4 m of rise - about 76 degrees. Shallower skids, steeper tips.</div>
+  </div>
+
+  <div class="card hidden" id="panePick">
+    <h2>What do you need to reach?</h2>
+    <div class="row">
+      <div><label>Work height (m)</label><input id="target" type="number" value="3" min="1.5" max="10" step="0.1"></div>
+      <div><label>Ladder kind</label><select id="kind"><option value="any">any</option><option value="step">step ladder</option><option value="extension">extension ladder</option></select></div>
+    </div>
+    <label class="chk"><input type="checkbox" id="roof"> I am stepping onto a roof (needs 3 rungs past the edge)</label>
+    <div style="margin-top:16px;"><button id="goPick">Size it</button></div>
+    <div class="err" id="err2"></div>
+  </div>
+
+  <div class="verdict" id="verdict"></div>
+
+  <div class="stats hidden" id="statsWrap">
+    <div class="stat"><div class="v" id="s1"></div><div class="k" id="k1"></div></div>
+    <div class="stat"><div class="v" id="s2"></div><div class="k" id="k2"></div></div>
+    <div class="stat"><div class="v" id="s3"></div><div class="k" id="k3"></div></div>
+  </div>
+
+  <div class="card">
+    <h2>The rules that keep you off the news</h2>
+    <p style="font-size:14px;">
+      The <b style="color:var(--acc)">4:1 rule</b> sets the lean: base out one meter for every four up, 76 degrees.
+      The <b style="color:var(--acc)">top two steps of a step ladder and top three rungs of an extension are not steps</b> - they are the part between you and the ground when the ladder walks.
+      Stepping onto a roof, the ladder must run <b style="color:var(--acc)">three rungs (1 m) past the edge</b> so you have a handhold.
+      And your ladder reaches 1.7 m less than the work: your arms do the last bit. Falls from ladders kill more DIYers than every power tool combined; the math is free.
+    </p>
+  </div>
+</div>
+<script src="engine.js"></script>
+<script>
+(function(){
+  var tabCheck = document.getElementById('tabCheck'), tabPick = document.getElementById('tabPick');
+  var paneCheck = document.getElementById('paneCheck'), panePick = document.getElementById('panePick');
+  function show(which){
+    var isCheck = which === 'check';
+    paneCheck.classList.toggle('hidden', !isCheck);
+    panePick.classList.toggle('hidden', isCheck);
+    tabCheck.classList.toggle('on', isCheck);
+    tabPick.classList.toggle('on', !isCheck);
+    document.getElementById('verdict').style.display = 'none';
+    document.getElementById('statsWrap').classList.add('hidden');
+  }
+  tabCheck.addEventListener('click', function(){ show('check'); });
+  tabPick.addEventListener('click', function(){ show('pick'); });
+
+  document.getElementById('presetShallow').addEventListener('click', function(){
+    document.getElementById('contact').value = 4;
+    document.getElementById('base').value = 2;
+  });
+  document.getElementById('presetSteep').addEventListener('click', function(){
+    document.getElementById('contact').value = 4;
+    document.getElementById('base').value = 0.5;
+  });
+
+  function stat(i, v, k){
+    document.getElementById('s' + i).textContent = v;
+    document.getElementById('k' + i).textContent = k;
+  }
+
+  document.getElementById('goCheck').addEventListener('click', function(){
+    var errEl = document.getElementById('err1'); errEl.textContent = '';
+    var r;
+    try {
+      r = LadderMathEngine.checkSetup({ contactM: document.getElementById('contact').value, baseM: document.getElementById('base').value });
+    } catch(e){ errEl.textContent = e.message; return; }
+    stat(1, r.deg + ' deg', 'your lean angle');
+    stat(2, r.band, 'verdict');
+    stat(3, r.idealBaseM + ' m', 'correct base distance (4:1)');
+    document.getElementById('statsWrap').classList.remove('hidden');
+    var v = document.getElementById('verdict');
+    v.innerHTML = r.verdict.replace(/([\d.]+ deg|too shallow|too steep|in the safe zone|[\d.]+ m out)/g, '<b>$1</b>');
+    v.style.display = 'block';
+  });
+
+  document.getElementById('goPick').addEventListener('click', function(){
+    var errEl = document.getElementById('err2'); errEl.textContent = '';
+    var r;
+    try {
+      r = LadderMathEngine.recommend({
+        targetM: document.getElementById('target').value,
+        kind: document.getElementById('kind').value,
+        roof: document.getElementById('roof').checked
+      });
+    } catch(e){ errEl.textContent = e.message; return; }
+    stat(1, r.standingM + ' m', 'standing height needed');
+    stat(2, r.step ? (r.step.sizeM != null ? r.step.sizeM + ' m' : 'none') : '-', 'step ladder pick');
+    stat(3, r.extension ? (r.extension.sizeM != null ? r.extension.sizeM + ' m' : 'none') : '-', 'extension pick');
+    document.getElementById('statsWrap').classList.remove('hidden');
+    var v = document.getElementById('verdict');
+    v.innerHTML = r.verdict.replace(/([\d.]+ m|3 rungs|scaffolding)/g, '<b>$1</b>');
+    v.style.display = 'block';
+  });
+})();
+</script>
+</body>
+</html>
